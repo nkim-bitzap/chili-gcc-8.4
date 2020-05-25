@@ -6,7 +6,7 @@ is 2020 and we have to counter COVID-19 somehow.
 Merely intended to be educational for those into embedded compiler development.
 The target architecture plays no role in the embedded world (it actually never
 did), and despite of all its flaws and shortcomings, it might be interesting
-- again, for educational purposes - for porting since featuring a comparably
+(again, for educational purposes) for porting since featuring a comparably
 simple core ISA.
 
 Unfortunately, there is no way to target the hardware, the only way to test the
