@@ -10,7 +10,7 @@ did), and despite of all its flaws and shortcomings, it might be interesting
 simple core ISA.
 
 Unfortunately, there is no way to target the hardware, the only way to test the
-code is the old ISS, i am possibly going to port later.
+code is the old ISS i am possibly going to port later.
 
 There is only a very rudimentary documentation that does not cover every detail,
 thus, things that are unclear are free to be interpreted in a most pleasing way.
