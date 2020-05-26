@@ -1,4 +1,4 @@
-/* Exported definitions for Ondemand Chili v1 GNU compiler backend
+/* Definitions of Ondemand's Chili v1 target machine for GNU compiler.
    Copyright (C) 2001-2018 Free Software Foundation, Inc.
 
    This file is part of GCC.
@@ -20,6 +20,14 @@ along with GCC; see the file COPYING3.  If not see
 #ifndef __CHILI_PROTOS_H__
 #define __CHILI_PROTOS_H__
 
+/* Messy here. Export target hooks we provide/implement in 'chili.h'
+   and 'chili.c' that need to be globally visible.
+
+   If you provide this file after configure and keep getting the same
+   error, you may want to reconfigure/rebuild */
+
+extern bool chili_valid_movsi_insn(machine_mode, rtx operands[2]);
+
 extern enum reg_class chili_regno_to_class(int);
 extern int chili_valid_regno_for_base_p(int);
 extern int chili_valid_regno_for_index_p(int);
@@ -32,8 +40,8 @@ extern void chili_init_cumulative_args(CUMULATIVE_ARGS *ca,
 
 extern HOST_WIDE_INT chili_initial_elimination_offset(int, int);
 
-extern bool chili_valid_movsi_insn(machine_mode, rtx operands[2]);
-extern void chili_expand_movsi(rtx *operands);
+extern void chili_expand_movi(machine_mode, rtx *operands);
+extern void chili_expand_cond_branch(rtx *operands);
 
 #endif /* __CHILI_PROTOS_H__ */
 

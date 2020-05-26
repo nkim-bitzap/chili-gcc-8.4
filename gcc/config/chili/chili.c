@@ -236,7 +236,29 @@ static bool chili_legitimate_address_p(machine_mode mode,
                                        rtx x,
                                        bool strict)
 {
-  return true;
+  /* NOTE, allow integral modes up to a single integer */
+  if (SImode == mode || HImode == mode || QImode == mode)
+  {
+    /* single operand addressing, register or immediate */
+    if (REG == GET_CODE(x) || CONST_INT == GET_CODE(x))
+    {
+      return true;
+    }
+    else if (PLUS == GET_CODE(x))
+    {
+      /* base + offset addressing */
+      int base_code = GET_CODE(XEXP(x, 0));
+      int off_code = GET_CODE(XEXP(x, 1));
+
+      if ((REG == off_code || CONST_INT == off_code)
+      && (REG == base_code))
+      {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /******************************************************************************/
@@ -296,17 +318,56 @@ bool chili_valid_movsi_insn(machine_mode mode, rtx operands[2])
    one, we simply force the 'source' operand to be put into a register prior
    to expansion/selection */
 
-void chili_expand_movsi(rtx *operands)
+void chili_expand_movi(machine_mode mode, rtx *operands)
 {
   if (MEM == GET_CODE(operands[0]) == MEM
   && MEM == GET_CODE(operands[1]) == MEM)
   {
-    /* for the time being support SImode only */
-    operands[1] = force_reg(SImode, operands[1]);
+    /* allow for all integral modes up to int32 */
+    operands[1] = force_reg(mode, operands[1]);
   }
 
-  /* for this minimal configuration, emit manually */
-  emit_insn(gen_movsi_insn(operands[0], operands[1]));
+  /* for the time being the default expander works fine
+  emit_insn(gen_movsi_insn(operands[0], operands[1])); */
+}
+
+/******************************************************************************/
+/* The expansion code for conditional branches is actually similar to the
+   default expansion code in 'insn-emit.c' with the major difference of
+   the mode for the condition operator, which we rewrite to be 'SImode'
+   instead of 'VOIDmode' by default */
+
+void chili_expand_cond_branch(rtx *operands)
+{
+  rtx cc = operands[0];
+  rtx cmp0 = operands[1];
+  rtx cmp1 = operands[2];
+  rtx dst = operands[3];
+
+  machine_mode mode = GET_MODE(cmp0);
+  rtx_code cc_code = GET_CODE(cc);
+
+  gcc_assert(dst != NULL);
+
+  /* in some cases both compare operands can be memory */
+  if (!register_operand(cmp0, mode))
+    cmp0 = force_reg(mode, cmp0);
+
+  if (REG != GET_CODE(cmp1) && CONST_INT != GET_CODE(cmp1))
+    cmp1 = force_reg(mode, cmp1);
+
+  /* create a new CC rtx for SImode with 'cmp0' and 'cmp1'
+     as operands */
+  rtx code = gen_rtx_fmt_ee(cc_code, mode, cmp0, cmp1);
+
+  /* combine with the 'dst' label and assemble a jump */
+  rtx label = gen_rtx_LABEL_REF(VOIDmode, dst);
+
+  rtx insn = gen_rtx_SET(pc_rtx,
+    gen_rtx_IF_THEN_ELSE(VOIDmode, code, label, pc_rtx));
+
+  /* pattern 'jump_insn(if_then_else(cc, then, else))' */
+  emit_jump_insn(insn);
 }
 
 /******************************************************************************/
@@ -334,7 +395,25 @@ static void chili_print_operand(FILE *file,
                                 rtx op,
                                 int letter)
 {
-  fprintf(file, "invalid");
+  if (op != 0)
+  {
+    if (REG == GET_CODE(op))
+    {
+      fprintf(file, "%s", reg_names[REGNO(op)]);
+    }
+    else if (MEM == GET_CODE(op))
+    {
+      /* use a separate hook for memory address operands */
+      output_address(GET_MODE(op), XEXP(op, 0));
+    }
+    else
+    {
+      /* this includes constants and all other constant
+         expressions including labels, symbols and floating
+         points as integers */
+      output_addr_const(file, op);
+    }
+  }
 }
 
 /******************************************************************************/
@@ -344,7 +423,43 @@ static void chili_print_operand_address(FILE *file,
                                         machine_mode mode,
                                         rtx addr)
 {
-  fprintf(file, "invalid");
+  if (NULL != addr)
+  {
+    if (REG == GET_CODE(addr))
+    {
+      fprintf(file, "%s", reg_names[REGNO(addr)]);
+      return;
+    }
+    else if (CONST_INT == GET_CODE(addr))
+    {
+      fprintf(file, "%x", INTVAL(addr));
+      return;
+    }
+    else if (PLUS == GET_CODE(addr))
+    {
+      rtx base = XEXP(addr, 0);
+      rtx offset = XEXP(addr, 1);
+
+      int base_code = GET_CODE(base);
+      int off_code= GET_CODE(offset);
+
+      if (REG == base_code)
+      {
+        if (REG == off_code)
+        {
+          fprintf(file, "%s + %s",
+            reg_names[REGNO(base)], reg_names[REGNO(offset)]);
+          return;
+        }
+        else if (CONST_INT == off_code)
+        {
+          fprintf(file, "%s + %d",
+            reg_names[REGNO(base)], INTVAL(offset));
+          return;
+        }
+      }
+    }
+  }
 }
 
 /* NOTE, this file is auto-generated in build/gcc and needs to be (if at all)
