@@ -217,7 +217,10 @@ typedef struct
 /******************************************************************************/
 
 #define DEFAULT_SIGNED_CHAR 1
-#define STORE_FLAG_VALUE -1
+
+/* the value that is used to represent a comparison that evaluates to
+   'true', usually 1 or -1 */
+#define STORE_FLAG_VALUE 1
 
 /* for nested functions only */
 #define TRAMPOLINE_SIZE 64

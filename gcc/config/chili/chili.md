@@ -28,6 +28,7 @@
 ;; condition and a nop (interestingly, gcc refuses to build without it)
 
 (include "constraints.md")
+(include "predicates.md")
 
 ;;------------------------------------------------------------------------------
 ;; Attributes
@@ -38,8 +39,8 @@
 ;;------------------------------------------------------------------------------
 
 (define_attr "type"
-  "unknown,nop,mov,arith,logic,sex,test,mult,load,store,cbranch,ubranch,
-   call, libcall"
+  "unknown,nop,mov,arith,logic,test,mult,load,store,cbranch,ubranch,
+   call,libcall"
   (const_string "unknown"))
 
 (define_attr "mode"
@@ -78,9 +79,9 @@
   [(set (match_operand:SI 0 "general_operand" "")
         (match_operand:SI 1 "general_operand" ""))]
   ""
-  "{
+  {
      chili_expand_movi(SImode, operands);
-  }"
+  }
 )
 
 ;; subword register moves/stores. Loads are handled as sign-/zero
@@ -90,7 +91,7 @@
 
 (define_insn "movhi_insn"
   [(set (match_operand:HI 0 "nonimmediate_operand" "=r,m")
-        (match_operand:HI 1 "nonmemory_operand" "rI,rJ"))]
+        (match_operand:HI 1 "register_imm_operand" "rI,rJ"))]
   ""
   "@
    %0 = %1;
@@ -102,7 +103,7 @@
 
 (define_insn "movqi_insn"
   [(set (match_operand:QI 0 "nonimmediate_operand" "=r,m")
-        (match_operand:QI 1 "nonmemory_operand" "rI,rJ"))]
+        (match_operand:QI 1 "register_imm_operand" "rI,rJ"))]
   ""
   "@
    %0 = %1;
@@ -116,49 +117,18 @@
   [(set (match_operand:HI 0 "general_operand" "")
         (match_operand:HI 1 "general_operand" ""))]
   ""
-  "{
+  {
      chili_expand_movi(HImode, operands);
-  }"
+  }
 )
 
 (define_expand "movqi"
   [(set (match_operand:QI 0 "general_operand" "")
         (match_operand:QI 1 "general_operand" ""))]
   ""
-  "{
+  {
      chili_expand_movi(QImode, operands);
-  }"
-)
-
-;;------------------------------------------------------------------------------
-;; Unconditional branches
-;;
-;; NOTE, one of the most important instructions to provide in the beginning
-;; is a direct unconditional jump.
-;;------------------------------------------------------------------------------
-
-;; direct unconditional
-(define_insn "jump"
-  [(set (pc) (label_ref (match_operand 0)))]
-  ""
-  "jump (%0);"
-  [(set_attr "type" "ubranch")]
-)
-
-;; indirect unconditional
-(define_insn "indirect_jump"
-  [(set (pc) (match_operand:SI 0 "register_operand" "r"))]
-  ""
-  "jump (%0);"
-  [(set_attr "type" "ubranch")]
-)
-
-;; later for call instructions
-(define_insn "return"
-  [(return)]
-  ""
-  "jump (r63);"
-  [(set_attr "type" "ubranch")]
+  }
 )
 
 ;;------------------------------------------------------------------------------
@@ -168,7 +138,7 @@
 (define_insn "addsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (plus:SI (match_operand:SI 1 "register_operand" "r")
-                 (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                 (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 + %2;"
   [(set_attr "type" "arith")
@@ -178,7 +148,7 @@
 (define_insn "subsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (minus:SI (match_operand:SI 1 "register_operand" "r")
-                  (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                  (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 - %2;"
   [(set_attr "type" "arith")
@@ -188,7 +158,7 @@
 (define_insn "mulsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (mult:SI (match_operand:SI 1 "register_operand" "r")
-                 (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                 (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 * %2;"
   [(set_attr "type" "mult")
@@ -200,7 +170,7 @@
 (define_insn "ashlsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (ashift:SI (match_operand:SI 1 "register_operand" "r")
-                   (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                   (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 << %2;"
   [(set_attr "type" "arith")
@@ -212,7 +182,7 @@
 (define_insn "ashrsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (ashiftrt:SI (match_operand:SI 1 "register_operand" "r")
-                     (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                     (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 >>> %2;"
   [(set_attr "type" "arith")
@@ -224,7 +194,7 @@
 (define_insn "lshrsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (lshiftrt:SI (match_operand:SI 1 "register_operand" "r")
-                     (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                     (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 >> %2;"
   [(set_attr "type" "arith")
@@ -235,7 +205,7 @@
 
 (define_insn "abssi2"
   [(set (match_operand:SI 0 "register_operand" "=r")
-        (abs:SI (match_operand:SI 1 "nonmemory_operand" "rI")))]
+        (abs:SI (match_operand:SI 1 "register_imm_operand" "rI")))]
   ""
   "%0 = abs(%1);"
   [(set_attr "type" "arith")
@@ -244,7 +214,7 @@
 
 (define_insn "negsi2"
   [(set (match_operand:SI 0 "register_operand" "=r")
-        (neg:SI (match_operand:SI 1 "nonmemory_operand" "rI")))]
+        (neg:SI (match_operand:SI 1 "register_imm_operand" "rI")))]
   ""
   "%0 = -%1;"
   [(set_attr "type" "arith")
@@ -257,7 +227,7 @@
 (define_insn "andsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (and:SI (match_operand:SI 1 "register_operand" "r")
-                (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 & %2;"
   [(set_attr "type" "arith")
@@ -267,7 +237,7 @@
 (define_insn "iorsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (ior:SI (match_operand:SI 1 "register_operand" "r")
-                (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 | %2;"
   [(set_attr "type" "arith")
@@ -277,7 +247,7 @@
 (define_insn "xorsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (xor:SI (match_operand:SI 1 "register_operand" "r")
-                (match_operand:SI 2 "nonmemory_operand" "rI")))]
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
   "%0 = %1 ^ %2;"
   [(set_attr "type" "arith")
@@ -319,23 +289,109 @@
 )
 
 (define_insn "zero_extendhisi2"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (zero_extend:SI (match_operand:HI 1 "memory_operand" "m")))]
+  [(set (match_operand:SI 0 "register_operand" "=r,m")
+        (zero_extend:SI (match_operand:HI 1 "memory_operand" "r,m")))]
   ""
-  "%0 = port16[%1];"
+  "@
+   %0 = %1 & 0xffff;   // zero-extend
+   %0 = port16[%1];"
 
-  [(set_attr "type" "load")
-   (set_attr "length" "8")]
+  [(set_attr "type" "arith,load")
+   (set_attr "length" "1,8")]
 )
 
 (define_insn "zero_extendqisi2"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (zero_extend:SI (match_operand:QI 1 "memory_operand" "m")))]
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+        (zero_extend:SI (match_operand:QI 1 "nonimmediate_operand" "r,m")))]
   ""
-  "%0 = port8[%1];"
+  "@
+   %0 = %1 & 0xff;   // zero-extend
+   %0 = port8[%1];"
 
-  [(set_attr "type" "load")
-   (set_attr "length" "8")]
+  [(set_attr "type" "arith,load")
+   (set_attr "length" "1,8")]
+)
+
+;;------------------------------------------------------------------------------
+;; Provide a way to store the results of a comparison
+;;------------------------------------------------------------------------------
+
+(define_expand "cstoresi4"
+  [(set (match_operand:SI 0 "register_operand")
+        (match_operator:SI 1 "ordered_comparison_operator"
+         [(match_operand:SI 2 "register_operand")
+          (match_operand:SI 3 "register_imm_operand")]))]
+  ""
+  "{
+    chili_expand_cstore(operands);
+    DONE;
+  }"
+)
+
+(define_insn "if_eq_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (eq:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 == %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_ne_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (ne:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 != %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_gt_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (gt:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 > %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_ge_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (ge:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 >= %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_lt_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (lt:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 < %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_le_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (le:SI (match_operand:SI 1 "register_operand" "r")
+               (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 <= %2) %0 = 1;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
 )
 
 ;;------------------------------------------------------------------------------
@@ -496,6 +552,50 @@
   ""
   "if (%0 (us) <= %1) jump (%2);"
   [(set_attr "type" "cbranch")]
+)
+
+;;------------------------------------------------------------------------------
+;; Unconditional branches
+;;
+;; NOTE, one of the most important instructions to provide in the beginning
+;; is a direct unconditional jump.
+;;------------------------------------------------------------------------------
+
+;; direct unconditional
+(define_insn "jump"
+  [(set (pc) (label_ref (match_operand 0)))]
+  ""
+  "jump (%0);"
+  [(set_attr "type" "ubranch")]
+)
+
+;; indirect unconditional
+(define_insn "indirect_jump"
+  [(set (pc) (match_operand:SI 0 "register_operand" "r"))]
+  ""
+  "jump (%0);"
+  [(set_attr "type" "ubranch")]
+)
+
+;; later for call instructions
+(define_insn "return"
+  [(return)]
+  ""
+  "jump (r63);"
+  [(set_attr "type" "ubranch")]
+)
+
+;;------------------------------------------------------------------------------
+;; Subreg extraction
+;;------------------------------------------------------------------------------
+
+(define_insn "subreg_insn"
+  [(set (match_operand:QI 0 "register_operand" "=r")
+        (subreg:QI (match_operand:SI 1 "register_operand" "r") 0))]
+  ""
+  "%0 = subreg(%1);"
+  [(set_attr "type" "arith")
+   (set_attr "length" "1")]
 )
 
 ;;------------------------------------------------------------------------------

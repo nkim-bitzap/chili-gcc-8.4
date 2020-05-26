@@ -52,6 +52,8 @@ along with GCC; see the file COPYING3.  If not see
 #include "hw-doloop.h"
 #include "rtl-iter.h"
 #include "tm-constrs.h"
+#include "pretty-print.h"
+#include "print-rtl.h"
 
 /* NOTE, this file has to be included after the generic ones above */
 #include "target-def.h"
@@ -371,6 +373,71 @@ void chili_expand_cond_branch(rtx *operands)
 }
 
 /******************************************************************************/
+/* Chili does not provide a flag/status register, instead the result of
+   a condition test is allowed to be put in arbitrary registers */
+
+void chili_expand_cstore(rtx *operands)
+{
+  rtx dst = operands[0];
+  rtx cc = operands[1];
+  rtx cmp0 = operands[2];
+  rtx cmp1 = operands[3];
+
+  gcc_assert(dst != NULL);
+
+  machine_mode mode = GET_MODE(cmp0);
+
+  if (!register_operand(cmp0, mode))
+    cmp0 = force_reg(mode, cmp0);
+
+  if (!register_imm_operand(cmp1, mode))
+    cmp1 = force_reg(mode, cmp1);
+
+  enum rtx_code cc_code = GET_CODE(cc);
+
+  /* create a node for the comparison itself first */
+  rtx code = gen_rtx_fmt_ee(cc_code, mode, cmp0, cmp1);
+  rtx new_dst = dst;
+
+  if (REG == GET_CODE(dst))
+  {
+    if (can_create_pseudo_p())
+    {
+      /* Chili does not provide a direct way to store the result of
+         a comparison, thus, we implement this by introducing a new
+         pseudo ('vr4') as an intermediate destination and write the
+         value at the end into the original destination ('vr3'):
+
+         vr4 = 0;
+         if (vr1 == vr2) vr4 = 1;
+         vr3 = vr4;
+     */
+
+      rtx new_dst = gen_reg_rtx(GET_MODE(dst));
+
+      emit_move_insn(new_dst, GEN_INT(0));
+      emit_move_insn(new_dst, code);
+      code = new_dst;
+    }
+    else {
+      /* a way to deal with cstore without additional pseudos is to
+         issue the same test instruction but with the condition and
+         the flag value being reversed, i.e.:
+
+         if (r1 == r2) r4 = 1;
+         if (r1 != r2) r4 = 0;
+
+         Can't find much about hardware restrictions in my docs, so,
+         let's not bother with that just yet */
+      gcc_unreachable();
+    }
+  }
+
+  /* now write to a register upon comparison result */
+  emit_move_insn(dst, code);
+}
+
+/******************************************************************************/
 /* Register/rename additional target libfuncs here */
 
 static void chili_init_libfuncs(void)
@@ -460,6 +527,21 @@ static void chili_print_operand_address(FILE *file,
       }
     }
   }
+}
+
+/******************************************************************************/
+/* Debug hooks */
+
+void print_chili_insn(const rtx_insn *insn, int verbose)
+{
+  rtx body = PATTERN (insn);
+
+  rtx operand0 = XEXP(body, 0);
+  rtx operand1 = XEXP(body, 1);
+  rtx operand2 = XEXP(body, 2);
+  rtx operand3 = XEXP(body, 2);
+
+  return;
 }
 
 /* NOTE, this file is auto-generated in build/gcc and needs to be (if at all)
