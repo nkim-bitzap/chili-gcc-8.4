@@ -1241,8 +1241,8 @@ bfin*-*)
 	use_collect2=no
 	use_gcc_stdint=wrap
 	;;
-chili*-*-linux*)
-	tm_file="${tm_file} dbxelf.h elfos.h gnu-user.h linux.h glibc-stdint.h"
+chili*-*-eabi)
+	tm_file="${tm_file} dbxelf.h elfos.h newlib-stdint.h"
 	tmake_file="${tmake_file} chili/t-chili"
 	;;
 cr16-*-elf)

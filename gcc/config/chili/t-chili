@@ -20,5 +20,6 @@
 # simple here and only make it depend on the auto-generated header
 # in gcc/build
 
-$(out_object_file): gt-chili.h
+# No special options required yet
+# $(out_object_file): gt-chili.h
 

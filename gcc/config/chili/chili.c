@@ -115,13 +115,6 @@ static rtx chili_libcall_value(machine_mode, const_rtx);
 #undef TARGET_PRINT_OPERAND_ADDRESS
 #define TARGET_PRINT_OPERAND_ADDRESS chili_print_operand_address
 
-/* NOTE, we also need to provide a struct for machine functions, the
-   compilation breaks without it */
-struct GTY(()) machine_function
-{
-  int reg_val;
-};
-
 struct gcc_target targetm = TARGET_INITIALIZER;
 
 /******************************************************************************/
@@ -528,23 +521,4 @@ static void chili_print_operand_address(FILE *file,
     }
   }
 }
-
-/******************************************************************************/
-/* Debug hooks */
-
-void print_chili_insn(const rtx_insn *insn, int verbose)
-{
-  rtx body = PATTERN (insn);
-
-  rtx operand0 = XEXP(body, 0);
-  rtx operand1 = XEXP(body, 1);
-  rtx operand2 = XEXP(body, 2);
-  rtx operand3 = XEXP(body, 2);
-
-  return;
-}
-
-/* NOTE, this file is auto-generated in build/gcc and needs to be (if at all)
-   included at the end of this file */
-#include "gt-chili.h"
 
