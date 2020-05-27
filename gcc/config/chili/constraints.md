@@ -51,4 +51,3 @@
   "12-bit signed integer constraint."
   (and (match_code "const_int")
        (match_test "IN_RANGE (ival, -2048, 2047)")))
-

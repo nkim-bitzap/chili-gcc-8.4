@@ -262,6 +262,10 @@ typedef struct
     fputs (":\n", FILE);                                                       \
   } while (0)
 
+/* allow macros to be substituted in insn output template strings without
+   referencing any operands */
+#define PRINT_OPERAND_PUNCT_VALID_P(CHAR) ((CHAR) == '@')
+
 /* not entirely sure about the following directives since missing in my
    docs. Thus, guessing here */
 #define ASM_APP_ON "#APP\n"

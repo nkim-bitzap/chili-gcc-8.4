@@ -42,7 +42,8 @@ extern HOST_WIDE_INT chili_initial_elimination_offset(int, int);
 
 extern void chili_expand_movi(machine_mode, rtx *operands);
 extern void chili_expand_cond_branch(rtx *operands);
-extern void chili_expand_cstore(rtx *operands);
+extern void chili_expand_store_cond(rtx *operands);
+extern void chili_expand_call(rtx *operands);
 
 #endif /* __CHILI_PROTOS_H__ */
 

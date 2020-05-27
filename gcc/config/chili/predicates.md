@@ -23,3 +23,7 @@
   (ior (match_operand 0 "register_operand")
        (match_code "const_int")))
 
+(define_predicate "call_target_operand"
+  (ior (match_operand 0 "register_operand")
+       (match_code "symbol_ref")))
+

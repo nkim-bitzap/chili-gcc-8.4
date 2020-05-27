@@ -30,6 +30,10 @@
 (include "constraints.md")
 (include "predicates.md")
 
+(define_constants
+  [(RET_ADDR_REGNUM 63)]
+)
+
 ;;------------------------------------------------------------------------------
 ;; Attributes
 ;;
@@ -90,27 +94,29 @@
 ;; 'port8')
 
 (define_insn "movhi_insn"
-  [(set (match_operand:HI 0 "nonimmediate_operand" "=r,m")
-        (match_operand:HI 1 "register_imm_operand" "rI,rJ"))]
+  [(set (match_operand:HI 0 "nonimmediate_operand" "=r,r,m")
+        (match_operand:HI 1 "general_operand" "rI,m,rJ"))]
   ""
   "@
    %0 = %1;
+   %0 = port16[%1];
    port16[%0] = %1;"
 
-  [(set_attr "type" "mov,store")
-   (set_attr "length" "1,8")]
+  [(set_attr "type" "mov,load,store")
+   (set_attr "length" "1,8,8")]
 )
 
 (define_insn "movqi_insn"
-  [(set (match_operand:QI 0 "nonimmediate_operand" "=r,m")
-        (match_operand:QI 1 "register_imm_operand" "rI,rJ"))]
+  [(set (match_operand:QI 0 "nonimmediate_operand" "=r,r,m")
+        (match_operand:QI 1 "general_operand" "rI,m,rJ"))]
   ""
   "@
    %0 = %1;
+   %0 = port8[%1];
    port8[%0] = %1;"
 
-  [(set_attr "type" "mov,store")
-   (set_attr "length" "1,8")]
+  [(set_attr "type" "mov,load,store")
+   (set_attr "length" "1,8,8")]
 )
 
 (define_expand "movhi"
@@ -118,7 +124,7 @@
         (match_operand:HI 1 "general_operand" ""))]
   ""
   {
-     chili_expand_movi(HImode, operands);
+    chili_expand_movi(HImode, operands);
   }
 )
 
@@ -127,7 +133,7 @@
         (match_operand:QI 1 "general_operand" ""))]
   ""
   {
-     chili_expand_movi(QImode, operands);
+    chili_expand_movi(QImode, operands);
   }
 )
 
@@ -314,16 +320,18 @@
 
 ;;------------------------------------------------------------------------------
 ;; Provide a way to store the results of a comparison
+;;
+;; NOTE, the values for the 'true' condition must match 'STORE_FLAG_VALUE'
 ;;------------------------------------------------------------------------------
 
 (define_expand "cstoresi4"
   [(set (match_operand:SI 0 "register_operand")
-        (match_operator:SI 1 "ordered_comparison_operator"
+        (match_operator:VOID 1 "ordered_comparison_operator"
          [(match_operand:SI 2 "register_operand")
           (match_operand:SI 3 "register_imm_operand")]))]
   ""
   "{
-    chili_expand_cstore(operands);
+    chili_expand_store_cond(operands);
     DONE;
   }"
 )
@@ -333,7 +341,7 @@
         (eq:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 == %2) %0 = 1;"
+  "if (%1 == %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -344,7 +352,7 @@
         (ne:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 != %2) %0 = 1;"
+  "if (%1 != %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -355,7 +363,7 @@
         (gt:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 > %2) %0 = 1;"
+  "if (%1 > %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -366,7 +374,29 @@
         (ge:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 >= %2) %0 = 1;"
+  "if (%1 >= %2) %0 = %@;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_gtu_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (gtu:SI (match_operand:SI 1 "register_operand" "r")
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 (us) > %2) %0 = %@;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_geu_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (geu:SI (match_operand:SI 1 "register_operand" "r")
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 (us) >= %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -377,7 +407,7 @@
         (lt:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 < %2) %0 = 1;"
+  "if (%1 < %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -388,7 +418,30 @@
         (le:SI (match_operand:SI 1 "register_operand" "r")
                (match_operand:SI 2 "register_imm_operand" "rI")))]
   ""
-  "if (%1 <= %2) %0 = 1;"
+  "if (%1 <= %2) %0 = %@;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_ltu_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (ltu:SI (match_operand:SI 1 "register_operand" "r")
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "if (%1 (us) < %2) %0 = %@;"
+
+  [(set_attr "type" "test")
+   (set_attr "length" "1")]
+)
+
+(define_insn "if_leu_mov_insn"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (leu:SI (match_operand:SI 1 "register_operand" "r")
+                (match_operand:SI 2 "register_imm_operand" "rI")))]
+  ""
+  "@
+   if (%1 (us) <= %2) %0 = %@;"
 
   [(set_attr "type" "test")
    (set_attr "length" "1")]
@@ -561,7 +614,6 @@
 ;; is a direct unconditional jump.
 ;;------------------------------------------------------------------------------
 
-;; direct unconditional
 (define_insn "jump"
   [(set (pc) (label_ref (match_operand 0)))]
   ""
@@ -569,7 +621,6 @@
   [(set_attr "type" "ubranch")]
 )
 
-;; indirect unconditional
 (define_insn "indirect_jump"
   [(set (pc) (match_operand:SI 0 "register_operand" "r"))]
   ""
@@ -577,7 +628,6 @@
   [(set_attr "type" "ubranch")]
 )
 
-;; later for call instructions
 (define_insn "return"
   [(return)]
   ""
@@ -586,16 +636,28 @@
 )
 
 ;;------------------------------------------------------------------------------
-;; Subreg extraction
+;; Call instruction
 ;;------------------------------------------------------------------------------
 
-(define_insn "subreg_insn"
-  [(set (match_operand:QI 0 "register_operand" "=r")
-        (subreg:QI (match_operand:SI 1 "register_operand" "r") 0))]
+(define_expand "call"
+  [(parallel [(call (match_operand 0)
+                    (match_operand 1))
+              (clobber (reg:SI RET_ADDR_REGNUM))])]
   ""
-  "%0 = subreg(%1);"
-  [(set_attr "type" "arith")
-   (set_attr "length" "1")]
+  "{
+     chili_expand_call(operands);
+  }"
+)
+
+(define_insn "call_insn"
+  [(parallel
+    [(call (mem:SI (match_operand:SI 0 "call_target_operand" ""))
+           (match_operand:SI 1 "immediate_operand" "K"))
+     (clobber (reg:SI RET_ADDR_REGNUM))])]
+  ""
+  "jsr(%0);"
+
+  [(set_attr "type" "call")]
 )
 
 ;;------------------------------------------------------------------------------

@@ -315,8 +315,8 @@ bool chili_valid_movsi_insn(machine_mode mode, rtx operands[2])
 
 void chili_expand_movi(machine_mode mode, rtx *operands)
 {
-  if (MEM == GET_CODE(operands[0]) == MEM
-  && MEM == GET_CODE(operands[1]) == MEM)
+  if (MEM == GET_CODE(operands[0]) 
+  && MEM == GET_CODE(operands[1]))
   {
     /* allow for all integral modes up to int32 */
     operands[1] = force_reg(mode, operands[1]);
@@ -369,7 +369,7 @@ void chili_expand_cond_branch(rtx *operands)
 /* Chili does not provide a flag/status register, instead the result of
    a condition test is allowed to be put in arbitrary registers */
 
-void chili_expand_cstore(rtx *operands)
+void chili_expand_store_cond(rtx *operands)
 {
   rtx dst = operands[0];
   rtx cc = operands[1];
@@ -408,7 +408,7 @@ void chili_expand_cstore(rtx *operands)
 
       rtx new_dst = gen_reg_rtx(GET_MODE(dst));
 
-      emit_move_insn(new_dst, GEN_INT(0));
+      emit_move_insn(new_dst, GEN_INT(!STORE_FLAG_VALUE));
       emit_move_insn(new_dst, code);
       code = new_dst;
     }
@@ -428,6 +428,24 @@ void chili_expand_cstore(rtx *operands)
 
   /* now write to a register upon comparison result */
   emit_move_insn(dst, code);
+}
+
+/******************************************************************************/
+
+void chili_expand_call(rtx *operands)
+{
+  rtx body = operands[0];
+  rtx dst = XEXP(body, 0);
+  rtx something = XEXP(body, 1);
+
+  /* everything that is not a symbol references goes into a register,
+     resulting in an indirect call */
+  if (SYMBOL_REF != GET_CODE(dst))
+  {
+    dst = force_reg(FUNCTION_MODE, dst);
+  }
+
+//  emit_call_insn(dst);
 }
 
 /******************************************************************************/
@@ -455,7 +473,18 @@ static void chili_print_operand(FILE *file,
                                 rtx op,
                                 int letter)
 {
-  if (op != 0)
+  if (NULL == op)
+  {
+    /* use '@' (see PRINT_OPERAND_PUNCT_VALID_P in 'chili.h')
+       to substitute macros (e.g. 'STORE_FLAG_VALUE') in the
+       insn template output string without operands. I.e.
+       can't reference 'op' here */
+    if (letter == '@')
+    {
+      fprintf(file, "%d", STORE_FLAG_VALUE);
+    }
+  }
+  else
   {
     if (REG == GET_CODE(op))
     {
