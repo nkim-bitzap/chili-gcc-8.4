@@ -26,7 +26,11 @@ dg-init
 
 # Main loop.
 set saved-dg-do-what-default ${dg-do-what-default}
-set dg-do-what-default "assemble"
+
+#NKim, set to compile for cross platform Chili testing
+#set dg-do-what-default "assemble"
+
+set dg-do-what-default "compile"
 gcc-dg-runtest [lsort [glob -nocomplain $srcdir/$subdir/*.\[cS\]]] "" "-w"
 set dg-do-what-default ${saved-dg-do-what-default}
 
